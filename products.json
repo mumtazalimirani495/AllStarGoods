@@ -1,0 +1,51 @@
+[
+  {
+    "id": "001",
+    "title": "Galaxy Hoodie",
+    "description": "A cozy hoodie with a vibrant galaxy print. Perfect for stargazers and dreamers.",
+    "images": [
+      "https://example.com/images/hoodie-front.jpg",
+      "https://example.com/images/hoodie-back.jpg"
+    ],
+    "price_usdt": 29.99
+  },
+  {
+    "id": "002",
+    "title": "Wireless Earbuds",
+    "description": "Compact and powerful earbuds with crystal-clear sound and long battery life.",
+    "images": [
+      "https://example.com/images/earbuds.jpg"
+    ],
+    "price_usdt": 49.50
+  },
+  {
+    "id": "003",
+    "title": "Eco-Friendly Water Bottle",
+    "description": "Reusable stainless steel bottle with temperature control. Stay hydrated sustainably.",
+    "images": [
+      "https://example.com/images/bottle.jpg",
+      "https://example.com/images/bottle-lifestyle.jpg"
+    ],
+    "price_usdt": 15.75
+  },
+{
+  "id": "P-1755150605298-19293",
+  "title": "My products",
+  "description": "This is my images",
+  "images": [
+    "Images/myimage.png"
+  ],
+  "price_usdt": 20
+},
+{
+  "id": "p-1755151588242-27770",
+  "title": "This is my",
+  "description": "Gffhhfg",
+  "price_usdt": 36,
+  "images": [
+    "Images/myimage.png",
+    "Images/myimage.png"
+  ]
+}
+
+]

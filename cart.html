@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cart - AllStarGoods</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #222;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .cart-container {
+      flex: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .cart-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .cart-details {
+      flex: 1;
+      margin-left: 15px;
+    }
+
+    .cart-details h4 {
+      margin: 0 0 5px;
+    }
+
+    .cart-details p {
+      margin: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .cart-image {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 5px;
+    }
+
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .quantity-control button {
+      padding: 5px 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .quantity-control span {
+      margin: 0 10px;
+      font-size: 16px;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: red;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .total-section {
+      text-align: right;
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    .checkout-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .empty-message {
+      text-align: center;
+      font-size: 18px;
+      color: #777;
+      margin-top: 50px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #222;
+      color: white;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>AllStarGoods - Your Cart</header>
+
+  <div class="cart-container" id="cartContainer">
+    <!-- Cart items will be injected here -->
+  </div>
+
+  <footer>
+    2025 copyright © AllStarGoods. All rights reserved.
+  </footer>
+
+  <script>
+    async function loadCart() {
+      const cart = JSON.parse(localStorage.getItem('cart')) || [];
+      const res = await fetch('products.json');
+      const products = await res.json();
+      const container = document.getElementById('cartContainer');
+
+      container.innerHTML = '';
+
+      if (cart.length === 0) {
+        container.innerHTML = '<div class="empty-message">Your cart is empty.</div>';
+        return;
+      }
+
+      let total = 0;
+
+      cart.forEach(item => {
+        const product = products.find(p => p.id === item.id);
+        if (!product) return;
+
+        const itemTotal = product.price_usdt * item.quantity;
+        total += itemTotal;
+
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.innerHTML = `
+          <img src="${product.images[0]}" class="cart-image" alt="${product.title}" />
+          <div class="cart-details">
+            <h4>${product.title}</h4>
+            <p>Price: ${product.price_usdt} USDT</p>
+            <div class="quantity-control">
+              <button onclick="updateQuantity('${item.id}', -1)">−</button>
+              <span id="qty-${item.id}">${item.quantity}</span>
+              <button onclick="updateQuantity('${item.id}', 1)">+</button>
+              <button class="remove-btn" onclick="removeItem('${item.id}')">✖</button>
+            </div>
+          </div>
+          <div class="cart-price" id="item-total-${item.id}">${itemTotal.toFixed(2)} USDT</div>
+        `;
+        container.appendChild(div);
+      });
+
+      const totalDiv = document.createElement('div');
+      totalDiv.className = 'total-section';
+      totalDiv.id = 'totalPrice';
+      totalDiv.textContent = `Total: ${total.toFixed(2)} USDT`;
+      container.appendChild(totalDiv);
+
+      const checkoutBtn = document.createElement('button');
+      checkoutBtn.className = 'checkout-button';
+      checkoutBtn.textContent = 'Proceed to Checkout';
+      checkoutBtn.onclick = () => {
+        if (cart.length === 0) {
+          alert('Your cart is empty.');
+        } else {
+          window.location.href = 'checkout.html';
+        }
+      };
+      container.appendChild(checkoutBtn);
+    }
+
+    function updateQuantity(id, change) {
+      const cart = JSON.parse(localStorage.getItem('cart')) || [];
+      const item = cart.find(i => i.id === id);
+      if (!item) return;
+
+      item.quantity = Math.max(1, item.quantity + change);
+      localStorage.setItem('cart', JSON.stringify(cart));
+      loadCart();
+    }
+
+    function removeItem(id) {
+      let cart = JSON.parse(localStorage.getItem('cart')) || [];
+      cart = cart.filter(item => item.id !== id);
+      localStorage.setItem('cart', JSON.stringify(cart));
+      loadCart();
+    }
+
+    loadCart();
+  </script>
+
+</body>
+</html>

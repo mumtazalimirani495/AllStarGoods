@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Product Details - AllStarGoods</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+    }
+
+    header {
+      background: #222;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .product-wrapper {
+      max-width: 800px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .image-gallery {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .image-gallery img {
+      height: 250px;
+      border-radius: 5px;
+    }
+
+    .product-title {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .product-description {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    .product-price {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .quantity-control button {
+      padding: 5px 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .quantity-control span {
+      margin: 0 10px;
+      font-size: 18px;
+    }
+
+    .total-price {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .add-to-cart {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #222;
+      color: white;
+      font-size: 14px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>AllStarGoods - Product Details</header>
+
+  <div class="product-wrapper" id="productWrapper">
+    <!-- Product content will be injected here -->
+  </div>
+
+  <footer>
+    2025 copyright © AllStarGoods. All rights reserved.
+  </footer>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
+
+    async function loadProduct() {
+      const res = await fetch('products.json');
+      const products = await res.json();
+      const product = products.find(p => p.id === productId);
+
+      if (!product) {
+        document.getElementById('productWrapper').innerHTML = '<p>Product not found.</p>';
+        return;
+      }
+
+      let quantity = 1;
+      let totalPrice = product.price_usdt;
+
+      const wrapper = document.getElementById('productWrapper');
+      wrapper.innerHTML = `
+        <div class="image-gallery">
+          ${product.images.map(img => `<img src="${img}" alt="${product.title}"/>`).join('')}
+        </div>
+        <div class="product-title">${product.title}</div>
+        <div class="product-description">${product.description}</div>
+        <div class="product-price">Unit Price: ${product.price_usdt} USDT</div>
+        <div class="quantity-control">
+          <button id="decrease">−</button>
+          <span id="quantity">1</span>
+          <button id="increase">+</button>
+        </div>
+        <div class="total-price">Total: <span id="total">${product.price_usdt}</span> USDT</div>
+        <button class="add-to-cart" id="addToCart">Add to Cart</button>
+      `;
+
+      document.getElementById('increase').onclick = () => {
+        quantity++;
+        updateDisplay();
+      };
+
+      document.getElementById('decrease').onclick = () => {
+        if (quantity > 1) quantity--;
+        updateDisplay();
+      };
+
+      function updateDisplay() {
+        document.getElementById('quantity').textContent = quantity;
+        document.getElementById('total').textContent = (product.price_usdt * quantity).toFixed(2);
+      }
+
+      document.getElementById('addToCart').onclick = () => {
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const existing = cart.find(item => item.id === product.id);
+        if (existing) {
+          existing.quantity += quantity;
+        } else {
+          cart.push({ id: product.id, quantity });
+        }
+        localStorage.setItem('cart', JSON.stringify(cart));
+        alert('Added to cart!');
+      };
+    }
+
+    loadProduct();
+  </script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AllStarGoods</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      overflow-x: hidden;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #222;
+      color: white;
+      padding: 10px 15px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-left button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .nav-menu {
+      display: none;
+      position: absolute;
+      top: 60px;
+      left: 15px;
+      background: #333;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .nav-menu a {
+      display: block;
+      color: white;
+      text-decoration: none;
+      margin: 5px 0;
+    }
+
+    .nav-center input {
+      padding: 6px;
+      font-size: 14px;
+      width: 160px;
+      border-radius: 4px;
+      border: none;
+    }
+
+    .nav-right {
+      position: relative;
+    }
+
+    .nav-right a {
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+      position: relative;
+    }
+
+    .cart-badge {
+      position: absolute;
+      top: -5px;
+      right: -10px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 50%;
+    }
+
+    .slider {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 15px;
+      gap: 15px;
+      background: #fff;
+    }
+
+    .slider::-webkit-scrollbar {
+      display: none;
+    }
+
+    .product-card {
+      flex: 0 0 auto;
+      width: 180px;
+      scroll-snap-align: start;
+      background: #eee;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .product-card img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 5px;
+    }
+
+    .product-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      padding: 15px;
+    }
+
+    .product-item {
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .product-item img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 5px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #222;
+      color: white;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-left">
+      <button onclick="toggleMenu()">☰</button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/index.html">Homepage</a>
+        <a href="/how-it-works.html">How It Works</a>
+      </div>
+    </div>
+    <div class="nav-center">
+      <input type="text" id="searchInput" placeholder="Search..." />
+    </div>
+    <div class="nav-right">
+      <a href="/cart.html">🛒 <span class="cart-badge" id="cartBadge">0</span></a>
+    </div>
+  </header>
+
+  <section class="slider" id="slider"></section>
+
+  <section class="product-list" id="productList"></section>
+
+  <footer>
+    2025 copyright © AllStarGoods. All rights reserved.
+  </footer>
+
+  <script>
+    const navMenu = document.getElementById('navMenu');
+    function toggleMenu() {
+      navMenu.style.display = navMenu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    let products = [];
+
+    async function loadProducts() {
+      const res = await fetch('products.json');
+      products = await res.json();
+      renderSlider(products);
+      renderProductList(products);
+    }
+
+    function renderSlider(data) {
+      const slider = document.getElementById('slider');
+      slider.innerHTML = '';
+      data.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+          <a href="products.html?id=${product.id}">
+            <img src="${product.images[0]}" alt="${product.title}" />
+            <h4>${product.title}</h4>
+            <p>${product.price_usdt} USDT</p>
+          </a>
+        `;
+        slider.appendChild(card);
+      });
+
+      // Auto-scroll every 2 seconds
+      let scrollAmount = 0;
+      setInterval(() => {
+        scrollAmount += 200;
+        if (scrollAmount >= slider.scrollWidth) scrollAmount = 0;
+        slider.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+      }, 2000);
+    }
+
+    function renderProductList(data) {
+      const list = document.getElementById('productList');
+      list.innerHTML = '';
+      data.forEach(product => {
+        const item = document.createElement('div');
+        item.className = 'product-item';
+        item.innerHTML = `
+          <a href="products.html?id=${product.id}">
+            <img src="${product.images[0]}" alt="${product.title}" />
+            <h4>${product.title}</h4>
+            <p>${product.price_usdt} USDT</p>
+          </a>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function updateCartBadge() {
+      const cart = JSON.parse(localStorage.getItem('cart')) || [];
+      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      document.getElementById('cartBadge').textContent = totalItems;
+    }
+
+    document.getElementById('searchInput').addEventListener('input', () => {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = products.filter(p =>
+        p.title.toLowerCase().includes(query)
+      );
+      renderSlider(filtered);
+      renderProductList(filtered);
+    });
+
+    loadProducts();
+    updateCartBadge();
+  </script>
+</body>
+</html>
