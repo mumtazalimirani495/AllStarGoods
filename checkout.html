@@ -96,6 +96,9 @@
 
   <script>
     async function payNow() {
+      console.clear();
+      console.log("=== Checkout process started ===");
+
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
       const phone = document.getElementById('phone').value.trim();
@@ -104,64 +107,86 @@
 
       if (!name || !email || !phone || !country || !address) {
         alert('Please fill in all mandatory fields.');
+        console.warn("Missing customer details");
         return;
       }
 
       const cart = JSON.parse(localStorage.getItem('cart')) || [];
       if (cart.length === 0) {
         alert('Your cart is empty.');
+        console.warn("Cart is empty");
         return;
       }
 
-      const res = await fetch('products.json');
-      const productsData = await res.json();
+      console.log("Cart loaded:", cart);
 
-      let totalPrice = 0;
-      const productsList = [];
+      try {
+        const res = await fetch('products.json');
+        if (!res.ok) throw new Error("Failed to load products.json");
+        const productsData = await res.json();
+        console.log("Products data loaded");
 
-      cart.forEach(item => {
-        const product = productsData.find(p => p.id === item.id);
-        if (product) {
-          totalPrice += product.price_usdt * item.quantity;
-          productsList.push({ id: item.id, quantity: item.quantity });
+        let totalPrice = 0;
+        const productsList = [];
+
+        cart.forEach(item => {
+          const product = productsData.find(p => p.id === item.id);
+          if (product) {
+            totalPrice += product.price_usdt * item.quantity;
+            productsList.push({ id: item.id, quantity: item.quantity });
+          }
+        });
+
+        console.log("Total Price:", totalPrice);
+        console.log("Products List:", productsList);
+
+        const orderId = 'order-' + Date.now();
+
+        const paymentData = {
+          name,
+          email,
+          phone,
+          country,
+          address,
+          order_id: orderId,
+          price_amount: parseFloat(totalPrice.toFixed(2)),
+          products: productsList
+        };
+
+        console.log("Sending payment data to Google Apps Script:", paymentData);
+
+        const response = await fetch(
+          "https://script.google.com/macros/s/AKfycbxtwXoaC6zSqZv5an0IRdulUZL6IDeEKtSul2TLDuBgiBvRd8Zl6LsafiVakL3mZgLsYg/exec",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(paymentData)
+          }
+        );
+
+        console.log("Response status from script:", response.status);
+
+        const result = await response.json();
+        console.log("Response JSON from script:", result);
+
+        if (!result || !result.invoice_url) {
+          alert('Payment creation failed. Please try again.');
+          console.error("Missing invoice_url in response");
+          return;
         }
-      });
 
-      const orderId = 'order-' + Date.now();
+        // Clear cart after sending order
+        localStorage.removeItem('cart');
+        console.log("Cart cleared from localStorage");
 
-      const paymentData = {
-        name,
-        email,
-        phone,
-        country,
-        address,
-        order_id: orderId,
-        price_amount: parseFloat(totalPrice.toFixed(2)),
-        products: productsList
-      };
+        // Redirect to NowPayments invoice
+        console.log("Redirecting to invoice:", result.invoice_url);
+        window.location.href = result.invoice_url;
 
-      // Send to Google Apps Script
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbxtwXoaC6zSqZv5an0IRdulUZL6IDeEKtSul2TLDuBgiBvRd8Zl6LsafiVakL3mZgLsYg/exec",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(paymentData)
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result || !result.invoice_url) {
-        alert('Payment creation failed. Please try again.');
-        return;
+      } catch (err) {
+        console.error("Error during checkout:", err);
+        alert("Something went wrong: " + err.message);
       }
-
-      // Clear cart after sending order
-      localStorage.removeItem('cart');
-
-      // Redirect to NowPayments invoice
-      window.location.href = result.invoice_url;
     }
   </script>
 
