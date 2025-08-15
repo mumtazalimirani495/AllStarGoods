@@ -1,90 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Checkout - AllStarGoods</title>
+  <meta charset="UTF-8">
+  <title>AllStarGoods Checkout</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; background: #f4f4f4; }
-    input, textarea, select { width: 100%; padding: 10px; margin: 10px 0; }
-    button { padding: 12px 20px; background-color: #28a745; color: white; border: none; cursor: pointer; width: 100%; font-size: 16px; }
-    button:hover { background-color: #218838; }
-    h2 { text-align: center; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; }
+    label { display: block; margin-top: 10px; }
+    input, textarea { width: 100%; padding: 8px; margin-top: 4px; }
+    #cartSummary { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
   </style>
 </head>
 <body>
 
-  <h2>Checkout</h2>
+  <h1>Checkout</h1>
+
   <form id="checkoutForm">
-    <label>Name:</label>
-    <input type="text" name="name" required>
+    <label>Name
+      <input type="text" name="name" required>
+    </label>
+    <label>Phone
+      <input type="tel" name="phone" required>
+    </label>
+    <label>Email
+      <input type="email" name="email" required>
+    </label>
+    <label>Country
+      <input type="text" name="country" required>
+    </label>
+    <label>Shipping Address
+      <textarea name="shippingAddress" required></textarea>
+    </label>
 
-    <label>Phone:</label>
-    <input type="text" name="phone" required>
+    <div id="cartSummary">
+      <h3>Order Summary</h3>
+      <ul id="cartItems"></ul>
+      <strong>Total: <span id="totalPrice">0</span> USDT</strong>
+    </div>
 
-    <label>Country:</label>
-    <input type="text" name="country" required>
-
-    <label>Shipping Address:</label>
-    <textarea name="address" required></textarea>
-
-    <label>Currency:</label>
-    <select name="currency" required>
-      <option value="USDT">USDT</option>
-      <option value="BTC">BTC</option>
-      <option value="ETH">ETH</option>
-    </select>
-
-    <button type="submit">Pay with Crypto</button>
+    <button type="submit">Proceed to Payment</button>
   </form>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbw1F0ctm9pMSHi9eKN0myrm5hV7wjRVN-9zCRAjMIUIauXaFqKgrhsejIsqAW11mJMYnw/exec";
+    const PRODUCTS_URL = 'products.json'; // adjust path if needed
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy5WlZ-1ueoFiG36_O_yMhPGIU48oGNiDmktAqj6RDgl2Q8HLrRaC_iz-LvQggNWBh-g/exec';
 
-    document.getElementById("checkoutForm").addEventListener("submit", async function(e) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]'); 
+    // cart should be array of { id: 'sku-cap', qty: 2 }
+
+    let productsData = {};
+    let totalPrice = 0;
+
+    async function loadCart() {
+      const res = await fetch(PRODUCTS_URL);
+      const products = await res.json();
+      products.forEach(p => productsData[p.id] = p);
+
+      const cartItemsEl = document.getElementById('cartItems');
+      totalPrice = 0;
+      cartItemsEl.innerHTML = '';
+
+      cart.forEach(item => {
+        const prod = productsData[item.id];
+        if (prod) {
+          const lineTotal = prod.price * item.qty;
+          totalPrice += lineTotal;
+          const li = document.createElement('li');
+          li.textContent = `${prod.name} x ${item.qty} — ${lineTotal.toFixed(2)} USDT`;
+          cartItemsEl.appendChild(li);
+        }
+      });
+      document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
+    }
+
+    document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const form = e.target;
-      const name = form.name.value;
-      const phone = form.phone.value;
-      const country = form.country.value;
-      const address = form.address.value;
-      const currency = form.currency.value;
-
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const product_ids = cart.map(item => item.id);
-      const total_price = cart.reduce((sum, item) => sum + (item.quantity * item.price_usdt || 0), 0).toFixed(2);
-      const order_id = "ASG-" + Date.now();
 
       const payload = {
-        name,
-        phone,
-        country,
-        address,
-        product_ids,
-        total_price,
-        currency,
-        order_id
+        name: form.name.value.trim(),
+        phone: form.phone.value.trim(),
+        email: form.email.value.trim(),
+        country: form.country.value.trim(),
+        shippingAddress: form.shippingAddress.value.trim(),
+        productIds: cart.map(c => c.id),
+        orderId: 'order-' + Date.now()
       };
 
-      try {
-        const res = await fetch(scriptURL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await res.json();
-        if (result.invoice_url) {
-          window.location.href = result.invoice_url;
-        } else {
-          alert("Error creating invoice: " + (result.error || "Unknown error"));
-        }
-      } catch (err) {
-        alert("Failed to connect to payment server.");
-        console.error(err);
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.invoice_url) {
+        // Clear cart after starting payment
+        localStorage.removeItem('cart');
+        window.location.href = data.invoice_url;
+      } else {
+        alert(data.error || 'Could not start payment');
       }
     });
+
+    loadCart();
   </script>
 
 </body>
