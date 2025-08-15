@@ -1,109 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>AllStarGoods Checkout</title>
+  <meta charset="UTF-8" />
+  <title>AllStarGoods — Checkout Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; }
-    label { display: block; margin-top: 10px; }
-    input, textarea { width: 100%; padding: 8px; margin-top: 4px; }
-    #cartSummary { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
-    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    body { font-family: system-ui, Arial, sans-serif; max-width: 780px; margin: 24px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 24px; margin: 0 0 12px; }
+    .grid { display: grid; gap: 12px; }
+    label { font-weight: 600; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #fafafa; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e5e7eb; }
+    .muted { color: #666; font-size: 12px; }
+    .total { font-weight: 700; font-size: 16px; }
+    button { padding: 12px 16px; background: #111827; color: #fff; border: 0; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .footer { margin-top: 18px; display: flex; align-items: center; gap: 10px; }
+    pre { background: #0b0f16; color: #d6e0ff; padding: 12px; border-radius: 8px; overflow: auto; font-size: 12px; }
+    .warn { background: #fff6e5; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 6px; }
   </style>
 </head>
 <body>
+  <h1>Checkout Test</h1>
+  <p class="muted">Currency: USDT. This page totals your cart, collects buyer info, and requests a NowPayments invoice via your Google Apps Script.</p>
 
-  <h1>Checkout</h1>
+  <div class="warn">
+    <strong>Note:</strong> For fetch() to work, open this over HTTPS (GitHub Pages). Opening as file:// may block products.json.
+  </div>
 
-  <form id="checkoutForm">
-    <label>Name
-      <input type="text" name="name" required>
-    </label>
-    <label>Phone
-      <input type="tel" name="phone" required>
-    </label>
-    <label>Email
-      <input type="email" name="email" required>
-    </label>
-    <label>Country
-      <input type="text" name="country" required>
-    </label>
-    <label>Shipping Address
-      <textarea name="shippingAddress" required></textarea>
-    </label>
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <h3 style="margin:0 0 10px">Buyer information</h3>
+      <form id="checkoutForm" class="grid">
+        <div class="row">
+          <div>
+            <label for="name">Name</label>
+            <input id="name" name="name" placeholder="Full name" required value="Test Customer" />
+          </div>
+          <div>
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" placeholder="+92 3xx xxxxxxx" required value="+92 300 0000000" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" required value="test@example.com" />
+          </div>
+          <div>
+            <label for="country">Country</label>
+            <input id="country" name="country" placeholder="Pakistan" required value="Pakistan" />
+          </div>
+        </div>
+        <div>
+          <label for="shippingAddress">Shipping address</label>
+          <textarea id="shippingAddress" name="shippingAddress" rows="3" placeholder="Street, City, State, Postal code" required>123 Street, Karachi</textarea>
+        </div>
 
-    <div id="cartSummary">
-      <h3>Order Summary</h3>
-      <ul id="cartItems"></ul>
-      <strong>Total: <span id="totalPrice">0</span> USDT</strong>
+        <div class="card" id="cartCard">
+          <h3 style="margin:0 0 6px">Order summary</h3>
+          <ul id="cartItems"></ul>
+          <div class="total" style="margin-top:8px">Total: <span id="totalPrice">0.00</span> USDT</div>
+          <div class="muted" style="margin-top:6px">Quantities can be edited below.</div>
+        </div>
+
+        <div class="footer">
+          <label style="display:flex; align-items:center; gap:8px; font-weight: normal;">
+            <input type="checkbox" id="clearCart" checked />
+            Clear cart after redirect
+          </label>
+          <button id="payBtn" type="submit">Proceed to Payment</button>
+        </div>
+      </form>
     </div>
 
-    <button type="submit">Proceed to Payment</button>
-  </form>
+    <div class="card">
+      <h3 style="margin:0 0 10px">Debug</h3>
+      <div class="muted" style="margin-bottom:6px">Last request</div>
+      <pre id="req"></pre>
+      <div class="muted" style="margin-top:10px; margin-bottom:6px">Last response</div>
+      <pre id="res"></pre>
+    </div>
+  </div>
 
   <script>
-    const PRODUCTS_URL = 'products.json'; // adjust path if needed
+    // CONFIG
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy5WlZ-1ueoFiG36_O_yMhPGIU48oGNiDmktAqj6RDgl2Q8HLrRaC_iz-LvQggNWBh-g/exec';
+    const PRODUCTS_URL = 'products.json'; // adjust path if needed (e.g., ./data/products.json)
 
-    let cart = JSON.parse(localStorage.getItem('cart') || '[]'); 
-    // cart should be array of { id: 'sku-cap', qty: 2 }
+    // Inline fallback products (USDT) for testing if products.json fails
+    const FALLBACK_PRODUCTS = [
+      { id: 'sku-cap',    name: 'AllStar Cap',    price: 19.99 },
+      { id: 'sku-hoodie', name: 'AllStar Hoodie', price: 49.00 }
+    ];
 
-    let productsData = {};
-    let totalPrice = 0;
+    // Seed a demo cart if none exists: [{id, qty}]
+    function ensureDemoCart() {
+      const existing = localStorage.getItem('cart');
+      if (existing) return JSON.parse(existing);
+      const demo = [
+        { id: 'sku-cap', qty: 1 },
+        { id: 'sku-hoodie', qty: 2 }
+      ];
+      localStorage.setItem('cart', JSON.stringify(demo));
+      return demo;
+    }
 
-    async function loadCart() {
-      const res = await fetch(PRODUCTS_URL);
-      const products = await res.json();
-      products.forEach(p => productsData[p.id] = p);
+    let cart = ensureDemoCart();
+    let productsById = {};
+    let total = 0;
 
-      const cartItemsEl = document.getElementById('cartItems');
-      totalPrice = 0;
-      cartItemsEl.innerHTML = '';
+    async function loadProducts() {
+      try {
+        const r = await fetch(PRODUCTS_URL, { cache: 'no-store' });
+        if (!r.ok) throw new Error('Failed to load products.json');
+        const arr = await r.json();
+        return Array.isArray(arr) ? arr : FALLBACK_PRODUCTS;
+      } catch (e) {
+        console.warn('Using fallback products:', e.message);
+        return FALLBACK_PRODUCTS;
+      }
+    }
 
-      cart.forEach(item => {
-        const prod = productsData[item.id];
-        if (prod) {
-          const lineTotal = prod.price * item.qty;
-          totalPrice += lineTotal;
-          const li = document.createElement('li');
-          li.textContent = `${prod.name} x ${item.qty} — ${lineTotal.toFixed(2)} USDT`;
-          cartItemsEl.appendChild(li);
-        }
+    function renderCart(products) {
+      productsById = Object.fromEntries(products.map(p => [p.id, p]));
+      const list = document.getElementById('cartItems');
+      list.innerHTML = '';
+      total = 0;
+
+      cart.forEach((item, idx) => {
+        const p = productsById[item.id];
+        if (!p) return;
+        const lineTotal = (p.price * item.qty);
+        total += lineTotal;
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div>
+            <div><strong>${p.name}</strong></div>
+            <div class="muted">${p.id}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px">
+            <input type="number" min="1" value="${item.qty}" style="width:72px" aria-label="Quantity for ${p.name}" />
+            <div>${lineTotal.toFixed(2)} USDT</div>
+          </div>
+        `;
+        const qtyInput = li.querySelector('input[type="number"]');
+        qtyInput.addEventListener('input', () => {
+          const newQty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+          cart[idx].qty = newQty;
+          localStorage.setItem('cart', JSON.stringify(cart));
+          renderCart(products);
+        });
+
+        list.appendChild(li);
       });
-      document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
+
+      document.getElementById('totalPrice').textContent = total.toFixed(2);
+    }
+
+    function expandProductIdsByQty(cartItems) {
+      // Example: [{id:'sku-cap', qty:2}] -> ['sku-cap','sku-cap']
+      const res = [];
+      cartItems.forEach(i => {
+        for (let n = 0; n < i.qty; n++) res.push(i.id);
+      });
+      return res;
+    }
+
+    function setBusy(busy) {
+      const btn = document.getElementById('payBtn');
+      btn.disabled = busy;
+      btn.textContent = busy ? 'Creating Invoice…' : 'Proceed to Payment';
+    }
+
+    function showDebug(req, res) {
+      document.getElementById('req').textContent = JSON.stringify(req, null, 2);
+      document.getElementById('res').textContent = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     }
 
     document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const form = e.target;
+      if (!cart.length) return alert('Cart is empty.');
 
+      const f = e.target;
       const payload = {
-        name: form.name.value.trim(),
-        phone: form.phone.value.trim(),
-        email: form.email.value.trim(),
-        country: form.country.value.trim(),
-        shippingAddress: form.shippingAddress.value.trim(),
-        productIds: cart.map(c => c.id),
+        name: f.name.value.trim(),
+        phone: f.phone.value.trim(),
+        email: f.email.value.trim(),
+        country: f.country.value.trim(),
+        shippingAddress: f.shippingAddress.value.trim(),
+        productIds: expandProductIdsByQty(cart),
         orderId: 'order-' + Date.now()
       };
 
-      const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.invoice_url) {
-        // Clear cart after starting payment
-        localStorage.removeItem('cart');
-        window.location.href = data.invoice_url;
-      } else {
-        alert(data.error || 'Could not start payment');
+      showDebug(payload, '(waiting…)');
+      setBusy(true);
+
+      try {
+        const r = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json().catch(() => ({}));
+        showDebug(payload, data);
+
+        if (data && data.invoice_url) {
+          if (document.getElementById('clearCart').checked) localStorage.removeItem('cart');
+          window.location.href = data.invoice_url;
+        } else {
+          alert((data && data.error) || 'Could not start payment');
+        }
+      } catch (err) {
+        showDebug(payload, String(err));
+        alert('Network error: ' + err.message);
+      } finally {
+        setBusy(false);
       }
     });
 
-    loadCart();
+    (async function init() {
+      const products = await loadProducts();
+      renderCart(products);
+    })();
   </script>
-
 </body>
 </html>
