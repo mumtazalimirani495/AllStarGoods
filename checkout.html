@@ -175,12 +175,14 @@
           return;
         }
 
+        // Show invoice URL in console for debugging
+        console.log("Invoice URL received:", result.invoice_url);
+
         // Clear cart after sending order
         localStorage.removeItem('cart');
         console.log("Cart cleared from localStorage");
 
         // Redirect to NowPayments invoice
-        console.log("Redirecting to invoice:", result.invoice_url);
         window.location.href = result.invoice_url;
 
       } catch (err) {
